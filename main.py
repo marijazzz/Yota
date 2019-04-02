@@ -7,6 +7,8 @@ from Card import Cards
 from Card import Joker
 from Card import Pack
 from Card import Hand
+from Card import Line
+from Card import Player
 from Errors import MyException
 
 
