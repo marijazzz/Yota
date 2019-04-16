@@ -33,6 +33,6 @@ class Desk:
         self.desk = np.zeros((132, 132, 3))
         # self.desk[i][j][0] = suit
         # self.desk[i][j][1] = value
-        # self.desk[i][j][0] = form
+        # self.desk[i][j][2] = form
         self.line = Line()
 
