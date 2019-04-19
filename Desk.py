@@ -1,6 +1,7 @@
 import numpy as np
 
 from Cards import *
+from Player import *
 
 class Line(object):
     """класс, описывающий выложенные линии"""
@@ -12,14 +13,19 @@ class Line(object):
         return len(self.line)
 
     def addCards(self, cards):
-        self.line += cards
+        """Добавление карт в линию"""
+        if len(self.line) < 5:
+            self.line += cards
 
+    @property
     def get_value(self):
         """Возвращает количество очков в строке из четырёх карт"""
         sum = 0
         if len(self.line) == 4:
             for i in range(4):
                 sum += int(self.line[i][1])
+                if Hand.get_amount(self.line) == 0: # при скидывании всех карт сумма очков в линии удваивается
+                    sum *= 2
             return sum
 
 
@@ -35,4 +41,5 @@ class Desk:
         # self.desk[i][j][1] = value
         # self.desk[i][j][2] = form
         self.line = Line()
+
 
