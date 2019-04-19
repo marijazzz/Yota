@@ -1,15 +1,14 @@
 import socket
 import numpy as np
 from _thread import * # упрощает работу с потоками и позволяет программировать запуск нескольких операций одновременно
+import sys
 
 # Подключение классов, описанных в других файлах
-from Card import Cards
-from Card import Joker
-from Card import Pack
-from Card import Hand
-from Card import Line
-from Card import Player
-from Errors import MyException
+from Cards import *
+from Pack import *
+from Player import *
+from Desk import *
+from Errors import *
 
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0) # создание сокета
