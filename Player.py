@@ -48,6 +48,19 @@ class Player:
         self.end_turn()  # завершаем ход
         return pack  # возвращаем новую колоду
 
+    def define_Joker(self, joker, color, value, form):
+        """
+        Передача игроком параметров Джокеру
+        """
+        joker.change(color, value, form)
+
+    def get_Joker(self, joker):
+        """
+        Функция, осуществляющая очищение параметров Джокера, когда игрок забирает его со стола и добавление Джокера в руку
+        """
+        joker.clear()
+        self.add_card(joker)
+
     def end_turn(self):
         """Завершение хода"""
         pass

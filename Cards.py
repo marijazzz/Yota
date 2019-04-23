@@ -24,10 +24,26 @@ class Cards(object):
 class Joker(object):
     """класс, описывающий карту Джокера"""
 
-    def __init__(self, color_, value_, form_):
-        self.color_ = 5
-        self.value_ = 5
-        self.form_ = 5
+    def __init__(self):
+        self.color = 5
+        self.value = 5
+        self.form = 5
+
+    def change(self, color, value, form):
+        """
+        Функция вызывается, когда игрок хочет поставить Джокера на поле и задает его параметры
+        """
+        self.color = color
+        self.value = value
+        self.form = form
+
+    def clear(self):
+        """
+        Функция вызывается, когда игрок забирает Джокера в руку
+        """
+        self.color = 5
+        self.value = 5
+        self.form = 5
 
 
         # '''

@@ -11,7 +11,8 @@ class Line(object):
         self.line = cards  # линия создается из списка карт
         self.pos = coordinate  # координаты самой левой или самой верхней карты линии
         self.direction = direction  # направление движения линии: 0 - нет направления, 1 - горизонтально, 2 - вертикально
-        self.properties = list(properties)  # определяет различные или одинаковые свойства карт в линии (0 если свойство одинаково для всех карт, 1 если разное)
+        self.properties = list(
+            properties)  # определяет различные или одинаковые свойства карт в линии (0 если свойство одинаково для всех карт, 1 если разное)
 
     def length(self):
         """Возвращает длину линии"""
@@ -25,8 +26,19 @@ class Line(object):
 
     def add_cards(self, card, position):
         """Добавление карт в линию"""
+
         if self.length() == 4:
             print('Линия полна')  # если линия полна, то выводим сообщщение о невозможности положить в линию
+            return
+
+        if type(card) == 'Joker':
+            self.direction = self.get_direction(position)
+            if (position[0] <= self.pos[0]) or (
+                position[1] <= self.pos[1]):  # проверяем позицию, куда хотим положить карту
+                self.line.insert(0, card)  # если позиция левее или выше, то обновляем координаты начала линии
+                self.pos = position
+            else:
+                self.line.append(card)  # если правее или ниже, то позицию начала сохраняем
             return
 
         if self.properties == [0, 0,
@@ -50,7 +62,7 @@ class Line(object):
 
     def change(self, card, hand, position):  # position - индекс Джокера в линии
         """Замена карты в линии в случае Джокера"""
-        if type(card) == Joker:
+        if type(card) == 'Joker':
             print('Так нельзя!(')
             return
         hand.append(self.line.pop(position))  # убрали Джокера из линии и добавили его в руку
@@ -91,19 +103,19 @@ class Line(object):
         карта (self) позиция (card) карта (other)
         self всегда левее/выше other
         """
-        if not self.corner_check(other, card): # проверяем, подходит ли карта одновременно к обеим линиям
+        if not self.corner_check(other, card):  # проверяем, подходит ли карта одновременно к обеим линиям
             return False
 
-        if (self.length() + other.length() + 1) > 4: # проверяем длину потенциальной линии
+        if (self.length() + other.length() + 1) > 4:  # проверяем длину потенциальной линии
             return False
 
         if self.length() >= other.length():
             line = Line(self.line, self.pos, self.direction, self.properties)
             if self.length() == 2:  # случай, когда длина левой линии = 2
                 position = (0, 0)
-                if self.direction == 1: # случай горизонтальной линии
+                if self.direction == 1:  # случай горизонтальной линии
                     position = (self.pos[0] + 2, self.pos[1])
-                elif self.direction == 2: # случай вертикальной линии
+                elif self.direction == 2:  # случай вертикальной линии
                     position = (self.pos[0], self.pos[1] + 2)
 
                 line.add_cards(card, position)
@@ -136,6 +148,13 @@ class Line(object):
                 return False
 
         return True
+
+    def concat(self, other, card):
+        """
+        Конкатинируем вместе две линии через карту
+        self всегда левее или выше other
+        """
+        self.line = self.line + [card] + other.line
 
 
 class Desk:
@@ -192,22 +211,83 @@ class Desk:
 
     def add_card(self, card, position):
         """Добавление карты на поле"""
-        if not self.desk[position[0]][position[1]]:  # смотрим, есть ли в позиции карта
-            possible_lines = self.find(position)  # ищем все линии вокруг позиции (хранятся индексы найденных линий линий)
 
-            if not possible_lines:  # проверяем, имеется ли хотя бы одна линия вокруг
-                print('Сюда нельзя ставить')
-                return
-
-            if len(possible_lines) == 1:
-                if self.lines[possible_lines[0]].check_card(card):
-                    self.lines[possible_lines[0]].add_cards(card, position)
-
-            elif len(possible_lines) == 2:
-                pass
-
-            elif len(possible_lines) == 4:
-                pass
-
+        def add_add_card(field, card):
+            if field.desk[position[0]][position[1]] == 0:
+                field.desk[position[0]][position[1]] = card
             else:
                 pass
+
+        possible_lines = self.find(
+                position)  # ищем все линии вокруг позиции (хранятся индексы найденных линий линий)
+
+        if not possible_lines:  # проверяем, имеется ли хотя бы одна линия вокруг
+            print('Сюда нельзя ставить')
+            return
+
+        if len(possible_lines) == 1:  # только в одной клетке по направлениям есть карта (либо слева,
+                # либо справа, либо сверху, либо снизу)
+            if self.lines[possible_lines[0]].check_card(
+                        card):  # Проверка того, можно ли достроить данной карту данную линию
+                self.lines[possible_lines[0]].add_cards(card, position)  # Добавление карты в выбранную линию
+                self.lines.append(Line(card, position))  # Создание новой линии
+            else:
+                print('Сюда поставить нельзя(')
+
+        elif len(possible_lines) == 2:  # в двух соседних клетках есть карта
+            if self.lines[possible_lines[0]].corner_check(self.lines[possible_lines[1]],
+                                                              card):  # Проверка того, можно ли достроить две выбранные линии одной картой                    self.lines[possible_lines[0]].add_cards(card, position)  # Добавление карты в одну линию
+                self.lines[possible_lines[1]].add_cards(card, position)  # Добавление карты в другую линию
+            elif self.lines[possible_lines[0]].line_check(
+                    self.lines[possible_lines[1]]):  # Проверка того, можно ли соединить две линии одной картой
+                self.lines[possible_lines[0]].concat(self.lines[possible_lines[1]], card)  # Соединение двух линий
+                self.lines.pop(possible_lines[1])  # Удалили правую или нижнюю линию (произошла конкатенация)
+                self.lines.append(Line(card, position))  # Создание новой линии
+            else:
+                print('Сюда поставить нельзя')
+
+        elif len(possible_lines) == 4:  # в четырёх соседних клетках есть карта
+            b1 = self.lines[possible_lines[0]].line_check(
+                    self.lines[possible_lines[2]])  # Вспомогательная переменная
+            b2 = self.lines[possible_lines[1]].line_check(
+                    self.lines[possible_lines[3]])  # Вспомогательная переменная
+            if b1 and b2:  # Проверка того, можно ли достроить две одинаковые линии
+                self.lines[possible_lines[0]].concat(self.lines[possible_lines[2]],
+                                                         card)  # Конкатенация горизонтальных линий
+                self.lines[possible_lines[1]].concat(self.lines[possible_lines[3]],
+                                                         card)  # Конкатенация вертикальных линий
+                self.lines.pop(possible_lines[2])  # Удаление правой линии
+                self.lines.pop(possible_lines[3])  # Удаление левой линии
+            else:
+                print('Сюда ставить нельзя')
+
+        else:  # в трёх соседних клетках есть карта
+
+            if (self.lines[possible_lines[0]].pos[0] == self.lines[possible_lines[1]].pos[0]) or (
+                            self.lines[possible_lines[0]].pos[1] == self.lines[possible_lines[1]].pos[1]):  # Проверка того, можно ли положить карту между тремя линиями
+                b1 = self.lines[possible_lines[0]].line_check(self.lines[possible_lines[1]], card) # Проверка того, можно ли соединить две противолежащие линии
+                b2 = self.lines[possible_lines[0]].corner_check(self.lines[possible_lines[2]], card) # Проверка того, можно ли соединить две перпендикулярные линии
+                b3 = self.lines[possible_lines[1]].corner_check(self.lines[possible_lines[2]], card) # Проверка того, можно ли соединить две перпендикулярные линии
+                linear = [0, 1] # две параллельные друг другу линии
+                corn = 2 # перпендикулярная средняя линия
+
+            elif (self.lines[possible_lines[0]].pos[0] == self.lines[possible_lines[2]].pos[0]) or (
+                            self.lines[possible_lines[0]].pos[1] == self.lines[possible_lines[2]].pos[1]): # Проверка того, можно ли положить карту между тремя линиями
+                b1 = self.lines[possible_lines[0]].line_check(self.lines[possible_lines[2]], card) # Проверка того, можно ли соединить две противолежащие линии
+                b2 = self.lines[possible_lines[0]].corner_check(self.lines[possible_lines[1]], card) # Проверка того, можно ли соединить две перпендикулярные линии
+                b3 = self.lines[possible_lines[1]].corner_check(self.lines[possible_lines[2]], card) # Проверка того, можно ли соединить две перпендикулярные линии
+                linear = [0, 2] # две параллельные друг другу линии
+                corn = 1 # перпендикулярная средняя линия
+
+            elif (self.lines[possible_lines[1]].pos[0] == self.lines[possible_lines[2]].pos[0]) or (
+                            self.lines[possible_lines[1]].pos[1] == self.lines[possible_lines[2]].pos[1]): # Проверка того, можно ли положить карту между тремя линиями
+                b1 = self.lines[possible_lines[1]].line_check(self.lines[possible_lines[2]], card) # Проверка того, можно ли соединить две противолежащие линии
+                b2 = self.lines[possible_lines[0]].corner_check(self.lines[possible_lines[1]], card) # Проверка того, можно ли соединить две перпендикулярные линии
+                b3 = self.lines[possible_lines[0]].corner_check(self.lines[possible_lines[2]], card) # Проверка того, можно ли соединить две перпендикулярные линии
+                linear = [1, 2] # две параллельные друг другу линии
+                corn = 0 # перпендикулярная средняя линия
+
+            if b1 and b2 and b3: #
+                self.lines[possible_lines[corn]].add_card(card, position) # Добавленеи карты в среднюю линию
+                self.lines[possible_lines[linear[0]]].concat(self.lines[possible_lines[linear[1]]], card) # Конкатенация противоположных линий
+                self.lines.pop(possible_lines[linear[1]]) # Удаление правой или нижней линии
