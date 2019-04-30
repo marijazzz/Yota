@@ -4,8 +4,7 @@ from Pack import *
 class Hand(object):
     """класс, описывающий состояние руки"""
 
-    def __init__(self, name):
-        self.name = name  # имя игрока
+    def __init__(self):
         self.cards = []  # Изначально рука пустая
 
     def add_card(self, card, position=None):
