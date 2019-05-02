@@ -1,4 +1,4 @@
-from Pack import *
+from .Pack import *
 
 
 class Hand(object):
@@ -32,8 +32,9 @@ class Hand(object):
 class Player:
     """Класс, описывающий количество очков у игрока, количество и достоинство его карт"""
 
-    def __init__(self, name):
+    def __init__(self, name, client_id):
         self.name = name
+        self.client_id = client_id
         self.hand = Hand()
         self.score = 0
 

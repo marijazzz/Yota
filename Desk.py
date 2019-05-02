@@ -1,5 +1,7 @@
 import numpy as np
 
+from .Exception import AddCardException
+
 from Cards import *
 from Player import *
 
@@ -221,8 +223,7 @@ class Desk:
                 position)  # ищем все линии вокруг позиции (хранятся индексы найденных линий линий)
 
         if not possible_lines:  # проверяем, имеется ли хотя бы одна линия вокруг
-            print('Сюда поставить карту нельзя(')
-            return
+            raise AddCardException('Сюда поставить карту нельзя')
 
         if len(possible_lines) == 1:  # только в одной клетке по направлениям есть карта (либо слева,
                 # либо справа, либо сверху, либо снизу)
@@ -231,7 +232,7 @@ class Desk:
                 self.lines[possible_lines[0]].add_cards(card, position)  # Добавление карты в выбранную линию
                 self.lines.append(Line(card, position))  # Создание новой линии
             else:
-                print('Сюда поставить карту нельзя(')
+                raise AddCardException('Сюда поставить карту нельзя')
 
         elif len(possible_lines) == 2:  # в двух соседних клетках есть карта
             if self.lines[possible_lines[0]].corner_check(self.lines[possible_lines[1]],
@@ -243,7 +244,7 @@ class Desk:
                 self.lines.pop(possible_lines[1])  # Удалили правую или нижнюю линию (произошла конкатенация)
                 self.lines.append(Line(card, position))  # Создание новой линии
             else:
-                print('Сюда поставить карту нельзя(')
+                raise AddCardException('Сюда поставить карту нельзя')
 
         elif len(possible_lines) == 4:  # в четырёх соседних клетках есть карта
             b1 = self.lines[possible_lines[0]].line_check(
@@ -258,7 +259,7 @@ class Desk:
                 self.lines.pop(possible_lines[2])  # Удаление правой линии
                 self.lines.pop(possible_lines[3])  # Удаление левой линии
             else:
-                print('Сюда поставить карту нельзя(')
+                raise AddCardException('Сюда поставить карту нельзя')
 
         else:  # в трёх соседних клетках есть карта
 

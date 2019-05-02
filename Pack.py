@@ -1,5 +1,5 @@
 from random import shuffle
-from Cards import *
+from .Cards import *
 
 
 class Pack(object):
@@ -17,6 +17,15 @@ class Pack(object):
         else:  # если есть ограничение на доступные карты, т.е. часть карт разыграна
             self.cards = card_list
             shuffle(self.cards)
+
+
+    def shuffle(self):
+        """ Функция перемешивания карт"""
+        shuffle(self.cards)
+
+    def addCard(self, card):
+        """ Функция добавления карт в колоду"""
+        self.cards.append(card)
 
     def deal_card(self):
         """ Функция сдачи карты """
