@@ -1,4 +1,4 @@
-from .Pack import *
+from Pack import *
 
 
 class Hand(object):
@@ -19,14 +19,14 @@ class Hand(object):
         """Отыгрывание карты"""
         return self.cards.pop(number)  # убирает карту из руки и передает карту на обработку, чтобы положить на поле
 
-    def update(self, pack):
-        """Обновление карт"""
-        pack.cards += self.cards  # добавляем карты из руки в колоду
-        self.cards = []  # убираем карты с руки
-        pack = Pack(pack.cards)  # обновление карт в колоде с учетом скинутых
-        for i in range(4):
-            self.cards.append(pack.deal_card())  # даем в руку новые карты
-        return pack
+   # def update(self, pack):
+    #    """Обновление карт"""
+     #   pack.cards += self.cards  # добавляем карты из руки в колоду
+      #  self.cards = []  # убираем карты с руки
+       # pack = Pack(pack.cards)  # обновление карт в колоде с учетом скинутых
+        #for i in range(4):
+         #   self.cards.append(pack.deal_card())  # даем в руку новые карты
+        #return pack
 
 
 class Player:
@@ -42,11 +42,11 @@ class Player:
         """Добавление карт"""
         self.hand.add_card(card)
 
-    def update(self, pack):
-        """Обновление карт на руке (в случае пропуска хода)"""
-        pack = self.hand.update(pack)  # обновляем руку и колоду
-        self.end_turn()  # завершаем ход
-        return pack  # возвращаем новую колоду
+#    def update(self, pack):
+ #       """Обновление карт на руке (в случае пропуска хода)"""
+  #      pack = self.hand.update(pack)  # обновляем руку и колоду
+   #     self.end_turn()  # завершаем ход
+    #    return pack  # возвращаем новую колоду
 
     def define_Joker(self, joker, color, value, form):
         """

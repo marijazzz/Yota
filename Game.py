@@ -1,6 +1,7 @@
 import json
-from .Player import Player
-from .Session import GameSession
+from Player import Player
+from Session import GameSession
+from Desk import *
 
 class GameServer():
     """Класс описывает ход игры"""
@@ -25,34 +26,10 @@ class GameServer():
                 self.game_sessions.append(game_session)
 
                 game_session.startGame()
+          
 
         elif message['type'] in ['IPutCard']: # сообщение о том, что игрок положил карту на стол
             for game_session in self.game_sessions:
                 if game_session.hasClient(client_id):
                     game_session.onMessage(client_id, message)
             # TODO А что будет если сессии нет никакой?
-
-
-
-
-
-#game_server = GameServer(sendMessage=sendMessage)
-
-
-
-
-
-
-
-
-
-    # @property
-    # def get_value(self):
-    #     """Возвращает количество очков в строке из четырёх карт"""
-    #     sum = 0
-    #     if len(self.line) == 4:
-    #         for i in range(4):
-    #             sum += int(self.line[i][1])
-    #             if Hand.get_amount(self.line) == 0: # при скидывании всех карт сумма очков в линии удваивается
-    #                 sum *= 2
-    #         return sum

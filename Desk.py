@@ -1,12 +1,12 @@
 import numpy as np
 
-from .Exception import AddCardException
+from Exception import AddCardException
 
 from Cards import *
 from Player import *
 
 
-class Line(object):
+class Line():
     """класс, описывающий выложенные линии"""
 
     def __init__(self, cards, coordinate, direction=0, properties=(0, 0, 0)):
@@ -33,15 +33,15 @@ class Line(object):
             print('Линия полна')  # если линия полна, то выводим сообщщение о невозможности положить в линию
             return
 
-        if type(card) == 'Joker':
-            self.direction = self.get_direction(position)
-            if (position[0] <= self.pos[0]) or (
-                position[1] <= self.pos[1]):  # проверяем позицию, куда хотим положить карту
-                self.line.insert(0, card)  # если позиция левее или выше, то обновляем координаты начала линии
-                self.pos = position
-            else:
-                self.line.append(card)  # если правее или ниже, то позицию начала сохраняем
-            return
+        # if type(card) == 'Joker':
+        #     self.direction = self.get_direction(position)
+        #     if (position[0] <= self.pos[0]) or (
+        #         position[1] <= self.pos[1]):  # проверяем позицию, куда хотим положить карту
+        #         self.line.insert(0, card)  # если позиция левее или выше, то обновляем координаты начала линии
+        #         self.pos = position
+        #     else:
+        #         self.line.append(card)  # если правее или ниже, то позицию начала сохраняем
+        #     return
 
         if self.properties == [0, 0, 0]:  # проверяем, как соотносятся друг с другом свойства карт (одинаковые или разные)
             for i in range(3):
@@ -150,6 +150,13 @@ class Line(object):
 
         return True
 
+    def countScore(self):
+        result = 0
+        for card in self.line:
+            result += card.value
+
+        return result
+
     def concat(self, other, card):
         """
         Конкатинируем вместе две линии через карту
@@ -168,6 +175,7 @@ class Desk:
         """
         self.desk = np.zeros((132, 132))
         self.lines = []  # список всех выложенных линий
+        self.cards_added_this_turn = []
 
     def find(self, position):
         """ищем прилежащии линии"""
@@ -209,6 +217,11 @@ class Desk:
             lines.append(idx)
 
         return lines
+
+    def add_card_first_time(self, card):
+
+        self.lines.append(Line([card], [61, 61]))
+        self.desk[61][61] = card
 
     def add_card(self, card, position):
         """Добавление карты на поле"""
@@ -289,6 +302,7 @@ class Desk:
                     self.lines[possible_lines[linear[0]]].concat(self.lines[possible_lines[linear[1]]], card) # Конкатенация противоположных линий
                     self.lines.pop(possible_lines[linear[1]]) # Удаление правой или нижней линии
 
+
             elif (self.lines[possible_lines[1]].pos[0] == self.lines[possible_lines[2]].pos[0]) or (
                             self.lines[possible_lines[1]].pos[1] == self.lines[possible_lines[2]].pos[1]): # Проверка того, можно ли положить карту между тремя линиями
                 b1 = self.lines[possible_lines[1]].line_check(self.lines[possible_lines[2]], card) # Проверка того, можно ли соединить две противолежащие линии
@@ -301,3 +315,21 @@ class Desk:
                     self.lines[possible_lines[corn]].add_card(card, position) # Добавленеи карты в среднюю линию
                     self.lines[possible_lines[linear[0]]].concat(self.lines[possible_lines[linear[1]]], card) # Конкатенация противоположных линий
                     self.lines.pop(possible_lines[linear[1]]) # Удаление правой или нижней линии
+
+            self.cards_added_this_turn.append(card)
+
+    def countScoreThisTurn(self):
+        result = 0
+        lines_changed_this_turn = []
+        cards_added_this_turn_set = set(self.cards_added_this_turn)
+        for line in self.lines:
+            if len(set.intersection(set(line.line), cards_added_this_turn_set)) > 0:
+                lines_changed_this_turn.append(line)
+
+        for line in lines_changed_this_turn:
+            result += line.countScore()
+
+        return result
+
+    def resetScore(self):
+        self.cards_added_this_turn = []

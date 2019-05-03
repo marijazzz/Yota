@@ -1,4 +1,4 @@
-class Cards(object):
+class Card():
     """класс, описывающий характеристики обычных карт"""
 
     def __init__(self, color, value, form):
@@ -20,14 +20,14 @@ class Cards(object):
     def form(self):
         return self.form
 
+class RegularCard(Card):
+    pass
 
-class Joker(object):
+class Joker(Card):
     """класс, описывающий карту Джокера"""
 
     def __init__(self):
-        self.color = 5
-        self.value = 5
-        self.form = 5
+        super().__init__(5,5,5)
 
     def change(self, color, value, form):
         """
