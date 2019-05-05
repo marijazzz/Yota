@@ -1,6 +1,8 @@
 class Card():
     """класс, описывающий характеристики обычных карт"""
 
+    PROPERTY_NUM = 3
+
     def __init__(self, color, value, form):
         self.color = color
         self.value = value
@@ -10,6 +12,12 @@ class Card():
     def __repr__(self):
         # return "<Cards {0} {1} {2}>".format(self.color, self.value, self.form)
         return self.color + self.value + self.form
+
+    def __hash__(self):
+        return int(self.color + self.value + self.form)
+
+    def __eq__(self, other):
+        return self.properties == other.properties
 
     def color(self):
         return self.color
