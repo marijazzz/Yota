@@ -1,4 +1,4 @@
-from Exception import AddCardException
+from Exception import *
 
 from Cards import RegularCard, Joker, Card
 from Player import *
@@ -6,29 +6,42 @@ from Player import *
 from collections import defaultdict
 from typing import List
 
-class LineException(Exception):
-    pass
 
 class Desk:
     MAX_DIMENTION = 103
     def __init__(self):
         """
+        Словарь, с пустыми значениями в виде None; максимальным считаем размер поля 103 * 103
         """
-
-        def returnNone():
+        def return_none():
+            """
+            Приведение к нужному формату
+            :return:
+            """
             return None
-        self.desk = defaultdict(returnNone)
+
+        self.desk = defaultdict(return_none)
         self.positions_of_cards_added_this_turn = []
 
     def add_card_first_time(self, card: Card):
-        """Добавление первой карты в центр поля"""
+        """
+        Добавление первой карты в центр поля
+        :param card:
+        :return:
+        """
         self.desk[(51,51)] = card # добавление карты
 
-    def isLineValidation(self, line: List[Card]):
+    def is_line_validation(self, line: List[Card]):
+        """
+        Проверка корректности постановки данной карты по отношению к другим картам в линии
+        :param line:
+        :return:
+        """
 
-        if len(line) > 4:
+        if len(line) > 4: # проверка длины линии
             raise LineException('Линия очень длинная')
 
+        # проверка соответствия свойств данной карты остальным картам в линии
         for property_idx in range(Card.PROPERTY_NUM):
             line_property_values = [card.properties[property_idx] for card in line]
 
@@ -36,11 +49,17 @@ class Desk:
                     or len(line_property_values) == len(set(line_property_values))):
                 raise LineException('Все карты в линии должны иметь либо одинковое значение, либо у всех карт разное значвение по каждому из 3-х свойств!')
 
-    def getLinesThatHasPosition(self, desk: defaultdict, position: tuple):
+    def get_lines_that_has_position(self, desk: defaultdict, position: tuple):
+        """
+        Поиск линий, расположенных рядом с заданной позицией
+        :param desk:
+        :param position:
+        :return:
+        """
         result = []  # массив с непустыми линиями вокруг указанной позиции на поле
         offsets = [(1, 0), (-1, 0), (0, 1), (0, -1)]  # смещение по координатам на 1 вправо, влево, вверх, вниз
-        result_horizontal_line = [desk[position]]
-        result_vertical_line = [desk[position]]
+        result_horizontal_line = [desk[position]] # горизонтальное направление потенциального выкладывания карт
+        result_vertical_line = [desk[position]] # вертикальное направление потенциального выкладывания карт
 
         for offset in offsets:
             cards_in_direction = []
@@ -60,15 +79,20 @@ class Desk:
 
 
     def add_card(self, card: Card, position: tuple):
+        """
+        Добавление карт на поле
+        :param card:
+        :param position:
+        :return:
+        """
         # карта должна выкладываться на пустое место
         if self.desk[position] is not None:
             raise AddCardException('Сюда поставить карту нельзя, там уже есть карты')
 
         desk_copy = self.desk.copy()
         desk_copy[position] = card
-        lines = self.getLinesThatHasPosition(desk_copy, position)
+        lines = self.get_lines_that_has_position(desk_copy, position)
         cards_this_turn = [self.desk[position] for position in self.positions_of_cards_added_this_turn]
-
 
         # Все карты, выложенные в этот ход, должны составлять одну линию
         lines_that_contains_all_cards_this_turn = [
@@ -77,26 +101,26 @@ class Desk:
         if len(lines_that_contains_all_cards_this_turn) != 1:
             AddCardException(f'Все карты, выложенные в этот ход, должны составлять одну линию')
 
-        # карты должна примыкать к любой из карт на столе
+        # Карты должна примыкать к любой из карт на столе
         if all(len(line) == 1 for line in lines):
             AddCardException(f'Карта должна примыкать к одной из выложенных карт')
         # list of list of card
         for line in lines:
-            # Все линии на столе должны починятся правилам линий:
+            # Все линии на столе должны подчинятся правилам линий:
             ## не больше 4-х карт
-            ## все карты в линии должны иметь либо одинковое значение, либо у всех карт разное значвение по каждому из 3-х свойств
+            ## все карты в линии должны иметь либо одинковое значение, либо у всех карт разное значение по каждому из 3-х свойств
             try:
-                self.isLineValidation(line)
+                self.is_line_validation(line)
             except LineException as e:
                 raise AddCardException(f'Сюда поставить карту нельзя. Ошибка линии: {str(e)}')
 
         self.desk[position] = card
         self.positions_of_cards_added_this_turn.append(position)
 
-    def resetScore(self):
+    def reset_score(self):
         self.positions_of_cards_added_this_turn = []
 
-    def removeDuplicatesInLines(self, lines):
+    def remove_duplicate_in_lines(self, lines):
         result = []
         for line in lines:
             need_to_add = True
@@ -108,15 +132,15 @@ class Desk:
 
         return result
 
-    def countScoreThisTurn(self):
+    def count_score_this_turn(self):
         lines_that_changes_this_turn = []
         score = 0
         for position in self.positions_of_cards_added_this_turn:
-            lines = self.getLinesThatHasPosition(self.desk, position)
+            lines = self.get_lines_that_has_position(self.desk, position)
             lines_that_changes_this_turn += lines
 
         # нужно удалить все дубликаты
-        lines_that_changes_this_turn = self.removeDuplicatesInLines(lines_that_changes_this_turn)
+        lines_that_changes_this_turn = self.remove_duplicate_in_lines(lines_that_changes_this_turn)
 
         for line in lines_that_changes_this_turn:
             if len(line) > 1:
