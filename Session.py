@@ -1,23 +1,33 @@
 from Desk import *
 from Player import *
 
-class GameSession():
+
+class GameSession:
+    """Класс описывает игровую сессию"""
 
     MAX_CARDS_IN_HAND = 4
-    """Класс описывает игровую сессию"""
-    def __init__(self, players, sendMessage): # - список игроков, посылаемые сообщения
+
+    def __init__(self, players, send_message):  # - список игроков, посылаемые сообщения
         self.players = players
-        self.sendMessage = sendMessage
+        self.send_message = send_message
         self.desk = Desk()
         self.pack = Pack()
         self.current_turn_player_index = 0
 
-    def hasClient(self, client_id):
-        """возвращает список id игроков данной сессии"""
+    def has_client(self, client_id):
+        """
+        Возвращает список id игроков данной сессии
+        :param client_id:
+        :return:
+        """
         return any([p.client_id == client_id for p in self.players])
 
-    def getPlayer(self, client_id):
-        """идентификация игрока"""
+    def get_player(self, client_id):
+        """
+        Идентификация игрока
+        :param client_id:
+        :return:
+        """
         result = None
         for player in self.players:
             if player.client_id == client_id:
@@ -25,16 +35,15 @@ class GameSession():
                 break
         return result
 
-    def isValidPutCard(self, message, client_id):
-        """проверка корректности хода каждого игрока"""
-        #return True (or False)
-        pass
-
-    def changeTurn(self):
-        """Передача хода другому игроку"""
+    def change_turn(self):
+        """
+        Передача хода другому игроку
+        :return:
+        """
         self.current_turn_player_index = (self.current_turn_player_index + 1) % self.players # выбор следующего игрока (по индексу заполнения очереди)
         current_player = self.players[self.current_turn_player_index]
-        self.sendMessage(
+        self.players.current_player.label = 'turn'
+        self.send_message(
             client_id=current_player.client_id,
             message={
                 'type': 'YourTurn',
@@ -42,9 +51,13 @@ class GameSession():
             }
         )
 
-    def DeskStateMessage(self, player):
-        """Сообщение о состоянии игрового поля"""
-        self.sendMessage(
+    def desk_state_message(self, player):
+        """
+        Сообщение о состоянии игрового поля
+        :param player:
+        :return:
+        """
+        self.send_message(
             client_id=player.client_id,
             message={
                 'type': 'DeskState',
@@ -53,9 +66,13 @@ class GameSession():
             }
         )
 
-    def HandStateMessage(self, player):
-        """Сообщение о состоянии руки"""
-        self.sendMessage(
+    def hand_state_message(self, player):
+        """
+        Сообщение о состоянии руки
+        :param player:
+        :return:
+        """
+        self.send_message(
             client_id=player.client_id,
             message={
                 'type': 'HandState',
@@ -64,33 +81,54 @@ class GameSession():
             }
         )
 
-    def startGame(self):
-        """описывает начало игры (до первого хода игрока)"""
+    def start_game(self):
+        """
+        Описывает начало игры (до первого хода игрока)
+        :return:
+        """
         # сдача четырёх карт на руку каждому игроку
         for player in self.players:
             for i in range(self.MAX_CARDS_IN_HAND):
                 card = self.pack.deal_card()
                 player.hand.add_card(card)
         for player in self.players:
-            self.HandStateMessage(player)
+            self.hand_state_message(player)
 
         card = self.pack.deal_card() # берём верхнюю карту из колоды
         self.desk.add_card_first_time(card) # первая карта ставится в центр поля
         for player in self.players:
-            self.DeskStateMessage(player)
+            self.desk_state_message(player)
 
-        self.changeTurn()
+        self.change_turn()
 
-    def onMessage(self, client_id: str, message: dict):
+    def on_message(self, client_id: str, message: dict):
+        """
+        Функция ответа сервера на разные сообщения от клиента
+        :param client_id:
+        :param message:
+        :return:
+        """
         if message['type'] == 'IPutCard':
-            # проверить, что сообщение пришло от игрока, у которого сейчас ход
+            # проверка того, что сообщение пришло от игрока, у которого сейчас ход
+            if self.players[self.current_turn_player_index].client_id != client_id:
+                self.send_message(
+                    client_id=client_id,
+                    message={
+                        'type': 'error',
+                        'reason': f'Не твой ход'
+                    }
+                )
+                return
+
             #message['card'] - это ДОЛЖНО приходить
             #message['desk_position'] - это ДОЛЖНО приходить
 
+            player = self.get_player(client_id)
+
             try:
-                self.desk.add_card(message['card'], message['desk_position'])
+                self.desk.add_card(message['card'], message['desk_position']) # добавление карты в указанное место
             except AddCardException as e:
-                self.sendMessage(
+                self.send_message(
                     client_id=client_id,
                     message={
                         'type': 'error',
@@ -98,32 +136,43 @@ class GameSession():
                     }
                 )
 
-            # валидации (...)
-            # Обовление self.desk
-            # Обновление hand у игрока который сейчас ходит (убрать карту, которую он выложил)
-            # Послать ВСЕМ клиентам игроков обновленный стол
-            for player in self.players:
-                self.DeskStateMessage(player)
+            player.hand.play_card(message['card'])  # убираем карту из руки
+            self.hand_state_message(player) # посылаем игроку сообщение о состоянии его руки
+
+            for player in self.players: # Посылаем всем клиентам игроков обновленный стол
+                self.desk_state_message(player)
 
         elif message['type'] == 'endTurn':
-            # проверить, что сообщение пришло от игрока, у которого сейчас ход
-            player = self.getPlayer(client_id)
+            # проверка того, что сообщение пришло от игрока, у которого сейчас ход
+            if self.players[self.current_turn_player_index].client_id != client_id:
+                self.send_message(
+                    client_id=client_id,
+                    message={
+                        'type': 'error',
+                        'reason': f'Не твой ход'
+                    }
+                )
+                return
+            player = self.get_player(client_id)
 
-            # TODO Довыдать карты из pack так, чтобы на руке было 4 карты или до исчерпания колоды
-            # А не конец ли это игры?
-            #TODO дописать это нормально
-            lenght_pack = self.pack.lenght() # узнаём, сколько карт осталось в колоде
-            score_per_this_turn = self.desk.countScoreThisTurn() # Подсчёт очков
+            while player.hand.get_amount() != 4:
+                if self.pack.lenght() != 0:
+                    card = self.pack.deal_card()
+                    player.hand.add_card(card)
+                else: # конец колоды
+                    break
+
+            score_per_this_turn = self.desk.count_score_this_turn() # Подсчёт очков
 
             if player.hand.get_amount == 0:
                 score_per_this_turn *= 2
 
             player.score += score_per_this_turn
 
-            self.HandStateMessage(player)
+            self.hand_state_message(player)
 
             for player in self.players:
-                self.sendMessage(
+                self.send_message(
                     client_id=player.client_id,
                     message={
                         'type': 'current_score',
@@ -133,12 +182,32 @@ class GameSession():
                         ] # перевод формата numpy в формат обычных list (это нужно для json)
                     }
                 )
-                self.desk.resetScore()
-                self.changeTurn()
+                self.desk.reset_score()
+                self.change_turn()
+
+            if player.hand.get_amount() == 0 and self.pack.lenght() == 0:
+                for player in self.players:
+                    self.send_message(
+                        client_id=player.client_id,
+                        message={
+                            'type': 'endGame',
+                            'matter': f'Игра окончена'
+                        }
+                    )
 
         elif message['type'] == 'endTurnAndRewindHand': # пропуск хода и обновление руки
-            # проверить, что сообщение пришло от игрока, у которого сейчас ход
-            player = self.getPlayer(client_id)
+            # проверка того, что сообщение пришло от игрока, у которого сейчас ход
+            if self.players[self.current_turn_player_index].client_id != client_id:
+                self.send_message(
+                    client_id=client_id,
+                    message={
+                        'type': 'error',
+                        'reason': f'Не твой ход'
+                    }
+                )
+                return
+
+            player = self.get_player(client_id)
             # возвращаем все карты в колоду
             for i in range(player.hand.get_amount()):
                 card = player.hand.play_card() # забираем карту у игрока
@@ -154,8 +223,27 @@ class GameSession():
                     card = self.pack.deal_card() # забираем карту из колоды
                     player.hand.add_card(card) # добавляем карту в руку игроку
 
-            self.HandStateMessage(player)
+            self.hand_state_message(player)
+            self.change_turn()
 
-            self.changeTurn()
 
+        elif message['type'] == 'disconnection': # игрок решил покинуть игру, при этом все его карты остаются на столе, карты с его руки добавляются в колоду, последняя перемешивается
+            player = self.get_player(client_id)
+            for this_player in self.players: # находим и удаляем данного игрока из очереди
+                if this_player == player:
+                    self.players.remove(this_player)
 
+            for player_ in self.players:
+                self.send_message(
+                    client_id=player_.client_id,
+                    message={
+                        'type': 'removePlayer',
+                        'matter': [{'name': player.name}, f'Вышел из игры']
+                    }
+                )
+
+            while player.hand.get_amount() != 0: # добавляем карты из руки данного игрока в колоду
+                card = player.hand.play_card()
+                self.pack.addCard(card)
+
+            self.pack.shuffle() # перемешиваем колоду
