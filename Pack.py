@@ -3,7 +3,7 @@ from Cards import *
 
 
 class Pack(object):
-    """класс, описывающий колоду карт"""
+    """Класс, описывающий колоду карт"""
 
     def __init__(self):
         color = '1234'  # 1 - Red, 2 - Blue, 3 - Green, 4 - Yellow
@@ -19,17 +19,31 @@ class Pack(object):
         self.shuffle()  # перетасовка колоды карт
 
     def shuffle(self):
-        """ Функция перемешивания карт"""
+        """
+        Функция перемешивания карт
+        :return:
+        """
+
         shuffle(self.cards)
 
     def addCard(self, card: Card):
-        """ Функция добавления карт в колоду"""
+        """
+        Добавление карт в колоду
+        :param card:
+        :return:
+        """
         self.cards.append(card)
 
     def deal_card(self):
-        """ Функция сдачи карты """
+        """
+        Функция сдачи карты
+        :return:
+        """
         return self.cards.pop()
 
     def lenght(self):
-        """функция возвращает количество карт в колоде"""
+        """
+        Возвращение количества карт в колоде
+        :return:
+        """
         return len(self.cards)

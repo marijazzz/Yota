@@ -1,5 +1,3 @@
-from Pack import *
-
 class Hand(object):
     """Класс, описывающий состояние руки"""
 
@@ -42,16 +40,3 @@ class Player:
         :return:
         """
         self.hand.add_card(card)
-
-    def define_Joker(self, joker, color, value, form):
-        """
-        Передача игроком параметров Джокеру
-        """
-        joker.change(color, value, form)
-
-    def get_Joker(self, joker):
-        """
-        Функция, осуществляющая очищение параметров Джокера, когда игрок забирает его со стола и добавление Джокера в руку
-        """
-        joker.clear()
-        self.add_card(joker)

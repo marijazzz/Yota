@@ -46,7 +46,7 @@ class DeskTestCase(unittest.TestCase):
         self.desk.add_card(RegularCard('2', '2', '1'), (50, 51))
         self.desk.add_card(RegularCard('3', '3', '1'), (49, 51))
 
-        score = self.desk.countScoreThisTurn()
+        score = self.desk.count_score_this_turn()
 
         self.assertEqual(score, 6)
 
@@ -59,7 +59,7 @@ class DeskTestCase(unittest.TestCase):
         self.desk.add_card(RegularCard('3', '3', '1'), (49, 51))
         self.desk.add_card(RegularCard('4', '4', '1'), (48, 51))
 
-        score = self.desk.countScoreThisTurn()
+        score = self.desk.count_score_this_turn()
 
         self.assertEqual(score, 20)
 
@@ -70,7 +70,7 @@ class DeskTestCase(unittest.TestCase):
             [RegularCard('2', '2', '3'), RegularCard('2', '2', '2')],
         ]
 
-        output = self.desk.removeDuplicatesInLines(input)
+        output = self.desk.remove_duplicate_in_lines(input)
 
         self.assertEqual(output, [
             [RegularCard('2', '2', '1'), RegularCard('2', '2', '2')],

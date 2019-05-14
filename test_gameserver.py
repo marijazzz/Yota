@@ -1,31 +1,32 @@
 from Game import GameServer
 import unittest
 
-def sendMessage(client_id, message):
+def send_message(client_id, message):
     print(client_id)
     print(message)
 
 class GameServerTestCase(unittest.TestCase):
     def setUp(self):
-        self.game_server = GameServer(sendMessage=sendMessage)
+        self.game_server = GameServer(send_message=send_message)
 
     def test_new_player(self):
-
         test_client_id = 'id_1'
-        self.game_server.onMessage(test_client_id, message={
+
+        self.game_server.on_message(test_client_id, message={
             'type': 'HelloIWannaPlay',
             'user_name': 'p1'
         })
+
         self.assertEqual(len(self.game_server.waiting_for_game_players), 1)
         player = self.game_server.waiting_for_game_players[0]
         self.assertEqual(player.name, 'p1')
         self.assertEqual(player.client_id, 'id_1')
 
     def test_new_game_session(self):
-        for i in range(4):
+        for i in range(len(4)):
             test_client_id = f'id_{str(i)}'
 
-            self.game_server.onMessage(test_client_id, message={
+            self.game_server.on_message(test_client_id, message={
                 'type': 'HelloIWannaPlay',
                 'user_name': f'p{str(i)}'
             })
@@ -36,6 +37,6 @@ class GameServerTestCase(unittest.TestCase):
 
 class DeskTestCase(unittest.TestCase):
     def setUp(self):
-        self.desk = GameServer(sendMessage=sendMessage)
+        self.desk = GameServer(send_message=send_message)
 if __name__ == '__main__':
     unittest.main()

@@ -1,7 +1,6 @@
 from Exception import *
 
-from Cards import RegularCard, Joker, Card
-from Player import *
+from Cards import RegularCard, Card
 
 from collections import defaultdict
 from typing import List
@@ -121,6 +120,11 @@ class Desk:
         self.positions_of_cards_added_this_turn = []
 
     def remove_duplicate_in_lines(self, lines):
+        """
+        При пересечение линий исключается подсчёт очков для одной общей карты дважды
+        :param lines:
+        :return:
+        """
         result = []
         for line in lines:
             need_to_add = True
@@ -133,6 +137,10 @@ class Desk:
         return result
 
     def count_score_this_turn(self):
+        """
+        Подсчёт очков за один ход
+        :return:
+        """
         lines_that_changes_this_turn = []
         score = 0
         for position in self.positions_of_cards_added_this_turn:
@@ -142,16 +150,16 @@ class Desk:
         # нужно удалить все дубликаты
         lines_that_changes_this_turn = self.remove_duplicate_in_lines(lines_that_changes_this_turn)
 
-        for line in lines_that_changes_this_turn:
+        for line in lines_that_changes_this_turn: # подсчёт очков в каждой изменённой за 1 ход линии
             if len(line) > 1:
                 for card in line:
-                    score += int(card.value)
+                    score += int(card.value) # считается кол-во очков от значения каждой карты
 
         lines_with_4_cards = [line for line in lines_that_changes_this_turn if len(line) == 4]
 
         score *= (2 ** len(lines_with_4_cards))
 
-        if self.positions_of_cards_added_this_turn == 4:
+        if self.positions_of_cards_added_this_turn == 4: # удваивание очков, если вся линия полна
             score *= 2
 
         return score
