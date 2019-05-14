@@ -41,9 +41,9 @@ class GameSession:
         Передача хода другому игроку
         :return:
         """
-        self.current_turn_player_index = (self.current_turn_player_index + 1) % self.players # выбор следующего игрока (по индексу заполнения очереди)
+        self.current_turn_player_index = (self.current_turn_player_index + 5) % 4 # выбор следующего игрока (по индексу заполнения очереди)
         current_player = self.players[self.current_turn_player_index]
-        self.players.current_player.label = 'turn'
+        current_player.label = 'turn'
         self.send_message(
             client_id=current_player.client_id,
             message={
