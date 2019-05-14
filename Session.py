@@ -1,5 +1,6 @@
 from Desk import *
 from Player import *
+from Pack import *
 
 
 class GameSession:
