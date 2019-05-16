@@ -1,4 +1,4 @@
-from Session import *
+from Session_test import *
 import unittest
 
 from Player import *
@@ -39,6 +39,10 @@ class SessionTestCase(unittest.TestCase):
     def test_start_game(self):
         self.game_session.start_game()
 
+    def test_message_time_limit(self):
+        player = self.player_1
+        self.game_session.message_time_limit(player)
+
     def test_on_message(self):
         client_id = 'id_1'
         message = {
@@ -46,3 +50,7 @@ class SessionTestCase(unittest.TestCase):
                         'reason': f'AAA'
                     }
         self.game_session.on_message(client_id, message)
+
+
+if __name__ == '__main__':
+    unittest.main()
