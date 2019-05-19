@@ -11,7 +11,12 @@ class GameSession:
     MAX_CARDS_IN_HAND = 4
 
 
-    def __init__(self, players, send_message, max_turn_duration_sec: int = 90):  # - список игроков, посылаемые сообщения
+    def __init__(self, players, send_message, max_turn_duration_sec: int = 90):
+        """
+        :param players: список игроков
+        :param send_message: посылаемые сообщения
+        :param max_turn_duration_sec: максимальная продолжительность хода 90 секунд
+        """
         self.players = players
         self.send_message = send_message
         self.desk = Desk()
@@ -44,10 +49,14 @@ class GameSession:
                 break
         return result
 
+
     async def time_is_over_coroutine(self):
-        await asyncio.sleep(self._max_turn_duration_sec)
-        # послать сообщение что у тебя закончилось время
-        await self.change_turn()
+        """
+        Контроль времени хода
+        :return:
+        """
+        await asyncio.sleep(self._max_turn_duration_sec) # ожидание по времени 90 секунд
+        await self.change_turn() # передача хода другому игроку по истечении 90 секунд
 
 
     async def change_turn(self):
@@ -99,7 +108,6 @@ class GameSession:
             }
         )
 
-# TODO: чекнуть эту функцию, кажется, она работает немного не так(
 
     async def start_game(self):
         """
@@ -111,20 +119,19 @@ class GameSession:
             for i in range(self.MAX_CARDS_IN_HAND):
                 card = self.pack.deal_card()
                 player.hand.add_card(card)
-        for player in self.players:
+        for player in self.players: # отправка информации о картах на руке каждому игроку
             self.hand_state_message(player)
 
         card = self.pack.deal_card() # берём верхнюю карту из колоды
         self.desk.add_card_first_time(card) # первая карта ставится в центр поля
-        for player in self.players:
+        for player in self.players: # передаём игрокам информацию об изменении состояния игрового поля
             self.desk_state_message(player)
 
-        if self.time_is_over_task is not None:
+        if self.time_is_over_task is not None: # отменяем предыдущую задачу
             self.time_is_over_task.cancel()
-        self.time_is_over_task = self.loop.create_task(self.time_is_over_coroutine())
+        self.time_is_over_task = self.loop.create_task(self.time_is_over_coroutine()) # запускаем "счётчик" заново
 
-        await self.change_turn()
-
+        await self.change_turn() # передача хода другому игроку
 
 
     async def on_message(self, client_id: str, message: dict):
@@ -146,11 +153,11 @@ class GameSession:
                 )
                 return
 
-            if self.time_is_over_task is not None:
+            if self.time_is_over_task is not None: # отменяем предыдущую задачу
                 self.time_is_over_task.cancel()
-            self.time_is_over_task = self.loop.create_task(self.time_is_over_coroutine())
+            self.time_is_over_task = self.loop.create_task(self.time_is_over_coroutine()) # запускаем "счётчик" заново
 
-            player = self.get_player(client_id)
+            player = self.get_player(client_id) # идентификация игрока
 
             try:
                 self.desk.add_card(message['card'], message['desk_position']) # добавление карты в указанное место
@@ -166,7 +173,8 @@ class GameSession:
             player.hand.play_card(message['card'])  # убираем карту из руки
             self.hand_state_message(player) # посылаем игроку сообщение о состоянии его руки
 
-            for player in self.players: # Посылаем всем клиентам игроков обновленный стол
+            # Посылаем всем клиентам игроков обновленный стол
+            for player in self.players:
                 self.desk_state_message(player)
 
         elif message['type'] == 'endTurn':
@@ -181,9 +189,9 @@ class GameSession:
                 )
                 return
 
-            if self.time_is_over_task is not None:
+            if self.time_is_over_task is not None: # отменяем предыдущую задачу
                 self.time_is_over_task.cancel()
-            self.time_is_over_task = self.loop.create_task(self.time_is_over_coroutine())
+            self.time_is_over_task = self.loop.create_task(self.time_is_over_coroutine()) # запускаем "счётчик" заново
 
             player = self.get_player(client_id)
 
@@ -215,7 +223,7 @@ class GameSession:
                     }
                 )
                 self.desk.reset_score()
-                await self.change_turn()
+                await self.change_turn() # передача хода другому игроку
 
             if player.hand.get_amount() == 0 and self.pack.lenght() == 0:
                 for player in self.players:
@@ -239,9 +247,9 @@ class GameSession:
                 )
                 return
 
-            if self.time_is_over_task is not None:
+            if self.time_is_over_task is not None: # отменяем предыдущую задачу
                 self.time_is_over_task.cancel()
-            self.time_is_over_task = self.loop.create_task(self.time_is_over_coroutine())
+            self.time_is_over_task = self.loop.create_task(self.time_is_over_coroutine()) # запускаем "счётчик" заново
 
             player = self.get_player(client_id)
             # возвращаем все карты в колоду
@@ -260,12 +268,14 @@ class GameSession:
                     player.hand.add_card(card) # добавляем карту в руку игроку
 
             self.hand_state_message(player)
-            await self.change_turn()
+            await self.change_turn() # передача хода другому игроку
 
-        elif message['type'] == 'disconnection': # игрок решил покинуть игру, при этом все его карты остаются на столе, карты с его руки добавляются в колоду, последняя перемешивается
+        # игрок решил покинуть игру, при этом все его карты остаются на столе, карты с его руки добавляются в колоду, последняя перемешивается
+        elif message['type'] == 'disconnection':
             player = self.get_player(client_id)
             self.players.remove(player) # находим и удаляем данного игрока из очереди
 
+            # Посылаем всем игрокам сообщение о том, какой игрок решил покинуть игру
             for player_ in self.players:
                 self.send_message(
                     client_id=player_.client_id,
@@ -275,10 +285,9 @@ class GameSession:
                     }
                 )
 
-            while player.hand.get_amount() != 0: # добавляем карты из руки данного игрока в колоду
+            # добавляем карты из руки данного игрока в колоду
+            while player.hand.get_amount() != 0:
                 card = player.hand.play_card(0)
                 self.pack.addCard(card)
 
             self.pack.shuffle() # перемешиваем колоду
-
-
