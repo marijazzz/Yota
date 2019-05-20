@@ -1,17 +1,18 @@
 import socket
 import asyncio
 from Game_3 import GameServer
-
+import game_window
 
 class Client:
     """Описывает объекты типа Клиент.
     Создает объект типа клиент на сервере"""
 
-    def __init__(self, tup, name=None, server = None):
+    def __init__(self, tup, window,  name='Player', server = None):
         self.sock = tup[0]  # сокет, соответсующий данному клиенту
         self.addr = tup[1]  # адресс клиента
         self.name = name  #
         self.server = server  #
+        self.window = window
         self.cards = []  #
 
     def get_id(self):
@@ -19,8 +20,8 @@ class Client:
         return self.addr
 
     def get_name(self, name):
-        """Передает имя клиента"""
-        return self.name
+        """Присваивает имя клиенту"""
+        self.name = name
 
     def give_name(self, name):
         """Присваивает имя клиенту"""
@@ -30,7 +31,7 @@ class Client:
         """Закрывает сокет клиента"""
         self.sock.close()
 
-    def det_names(self):
+    def get_names(self):
         """Получает имена всех игроков"""
         self.sock.send(bytes(self.addr), 'id')
         self.sock.send(b'names', 'type')
@@ -86,8 +87,6 @@ class Client:
     async def receive_message(self):
         """Обрабатывает сигналы от сервера"""
         message_type = self.sock.recv(1024, 'type')
-        if message_type == b'StartGame':
-            pass
         if message_type == b'YourTurn':
             self.start_turn()
         if message_type == b'endTurn':
