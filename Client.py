@@ -1,27 +1,37 @@
 import socket
 import asyncio
 from Game_3 import GameServer
-from Net.py import Server
 
 
 class Client:
     """Описывает объекты типа Клиент.
     Создает объект типа клиент на сервере"""
 
-    def __init__(self, tup, name=None, server: Server = None):
+    def __init__(self, tup, name=None, server = None):
         self.sock = tup[0]  # сокет, соответсующий данному клиенту
         self.addr = tup[1]  # адресс клиента
-        self.name = name
-        self.server = server
-        self.cards = []
+        self.name = name  #
+        self.server = server  #
+        self.cards = []  #
 
     def get_id(self):
+        """Передает id клиента"""
         return self.addr
 
-    def give_name(self, name):
+    def get_name(self, name):
+        """Присваивает имя клиенту"""
         self.name = name
 
+    def give_name(self, name):
+        """Присваивает имя клиенту"""
+        self.name = name
+
+    def close(self):
+        """Закрывает сокет клиента"""
+        self.sock.close()
+
     def det_names(self):
+        """Получает имена всех игроков"""
         self.sock.send(bytes(self.addr), 'id')
         self.sock.send(b'names', 'type')
         names = []
@@ -29,10 +39,8 @@ class Client:
             names.append(str(self.sock.recv(1024, 'name')))
         return names
 
-    def get_name(self):
-        return self.name
-
     def send_card(self, card, pos):
+        """Передает карты, которые хочется сыграть"""
         self.sock.send(bytes(self.addr), 'id')
         self.sock.send(b'IPutCard', 'type')
         self.sock.send(bytes(card), 'card')
@@ -45,12 +53,14 @@ class Client:
         return True
 
     def start_turn(self):
+        """Инициирует начало хода"""
         name = self.sock.recv(1024, 'name')
         if name == self.name:
             return True
         return False
 
     def end_turn(self, flag):
+        """Инициирует конец хода"""
         if flag:
             self.sock.send(bytes(self.addr), 'id')
             if self.cards:
@@ -66,9 +76,15 @@ class Client:
                 cards = self.sock.recv(1024, 'cards')  # ВАЖНЫЙ КОММЕНТ: тут присылаются положенные карты
             elif end == b'endTurnAndRewindHand':
                 deck = self.sock.recv(1024, 'cards')  # ВАЖНЫЙ КОММЕНТ: тут присылается новая колода
-            name = self.sock.recv(1024, 'name')  # ВАЖНЫЙ КОММЕНТ: тут присылается имя нового текущего игрока
+        name = self.sock.recv(1024, 'name')  # ВАЖНЫЙ КОММЕНТ: тут присылается имя нового текущего игрока
+        scores = list(self.sock.recv(1024, 'scores'))  # ВАЖНЫЙ КОММЕНТ: тут присылается текущий счет
+
+    def disconnection(self):
+        """Посылает на сервер сообзение о желании выйти из игры"""
+        self.sock.send(b'disconnection', 'type')
 
     async def receive_message(self):
+        """Обрабатывает сигналы от сервера"""
         message_type = self.sock.recv(1024, 'type')
         if message_type == b'YourTurn':
             self.start_turn()
@@ -76,5 +92,3 @@ class Client:
             self.end_turn(False)
         if message_type == b'error':
             reason = str(self.sock.recv(1024, 'reason'))  # ВАЖНЫЙ КОММЕНТ: тут присылается обоснование ошибки
-        if message_type == b'current_score':
-            score = list(self.sock.recv(1024, 'score'))

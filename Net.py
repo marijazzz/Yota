@@ -1,5 +1,6 @@
 import socket
 from Game_3 import GameServer
+import Client.py
 
 
 class Server(GameServer):
@@ -24,19 +25,23 @@ class Server(GameServer):
             self.play = False  # состояние игры на сервере
 
     def disconnection(self, client):
+        """Инициирует отключение клиента"""
         self.clients.remove(client)
         client.close()
 
     def start_game(self):
+        """Инициирует начало игры"""
         self.play = True
         self.room.send(b'StartGame')
 
     def turn(self):
+        """Обрабатывает ход игрока"""
         card = self.room.recv(1024, 'card')
         pos = self.room.recv(1024, 'pos')
         return card, pos
 
     def send_error(self, id):
+        """Отправляет ошибки"""
         self.room.sendto(b'error', 'type', (self._ip, id))
         self.room.sendto(bytes(self.send_message[message]['reason']), 'reason', (self._ip, id))
 
@@ -44,12 +49,12 @@ class Server(GameServer):
         """Передает ход следующему игроку"""
         self.room.send(bytes(self.current_player.cards), 'cards')
         self.room.send(bytes(new_player.name), 'name')
-        self.room.send(b'current_score', 'type')
         self.room.send(bytes(self.send_message[message]['desk']), 'score')
         self.current_player = new_player
         self.room.sendto(b'YourTurn', 'type', (self._ip, new_player.addr))
 
     async def receive_message(self):
+        """Обрабатывает сообщения от игрока"""
         id = self.room.recv(1024, 'id')
         message_type = self.room.recv(1024, 'type')
 
@@ -94,55 +99,6 @@ class Server(GameServer):
             message = {'type': message_type}
             self.on_message(id, message)
             self.disconnection()
-
-
-class Client:
-    """Описывает объекты типа Клиент.
-    Создает объект типа клиент на сервере"""
-
-    def __init__(self, tup, name=None, server: Server = None):
-        self.sock = tup[0]  # сокет, соответсующий данному клиенту
-        self.addr = tup[1]  # адресс клиента
-        self.name = name
-        self.server = server
-        self.cards = []
-
-    def get_name(self, name):
-        """Присваивает имя клиенту"""
-        self.name = name
-
-    def send_name(self):
-        """Передает имя"""
-        self.sock.send(bytes(self.name), 'name')
-
-    def close(self):
-        """Закрывает сокет клиента"""
-        self.sock.close()
-
-    def turn(self, card: str, pos: tuple):
-        """Посылает на сервер карту и ее позицию от клиента и принимает правильность постановки карты"""
-        self.sock.send(bytes(card), 'card')
-        self.sock.send(bytes(pos), 'pos')
-        data = self.sock.recv(1024, 'check')
-        if data:
-            self.cards.append((card, pos))
-            return True
-        return False
-
-    def end_turn(self, flag):
-        """Посылает информацю о конце собственного хода или принимает информацию о конце чужого хода
-        True: конец собственного
-        False: конец чужого"""
-        if flag:
-            self.sock.send(bytes(self.cards), 'cards')
-        self.sock.recv(1024, 'name')
-
-    def disconnection(self):
-        """Посылает на сервер сообзение о желании выйти из игры"""
-        self.sock.send(b'disconnection', 'type')
-
-    def work(self):
-        """Определяет работу клиента"""
 
 
 def create_mother(port):
