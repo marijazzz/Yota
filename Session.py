@@ -133,7 +133,6 @@ class GameSession:
 
         await self.change_turn() # передача хода другому игроку
 
-
     async def on_message(self, client_id: str, message: dict):
         """
         Функция ответа сервера на разные сообщения от клиента
@@ -187,7 +186,7 @@ class GameSession:
                         'reason': f'Не твой ход'
                     }
                 )
-                return
+                return False
 
             if self.time_is_over_task is not None: # отменяем предыдущую задачу
                 self.time_is_over_task.cancel()
@@ -245,20 +244,20 @@ class GameSession:
                         'reason': f'Не твой ход'
                     }
                 )
-                return
+                return False
 
-            if self.time_is_over_task is not None: # отменяем предыдущую задачу
+            if self.time_is_over_task is not None:  # отменяем предыдущую задачу
                 self.time_is_over_task.cancel()
-            self.time_is_over_task = self.loop.create_task(self.time_is_over_coroutine()) # запускаем "счётчик" заново
+            self.time_is_over_task = self.loop.create_task(self.time_is_over_coroutine())  # запускаем "счётчик" заново
 
             player = self.get_player(client_id)
             # возвращаем все карты в колоду
             for i in range(player.hand.get_amount()):
-                card = player.hand.play_card() # забираем карту у игрока
-                self.pack.addCard(card) # кладём карту в колоду
-            self.pack.shuffle() # перемешиваем колоду
+                card = player.hand.play_card()  # забираем карту у игрока
+                self.pack.addCard(card)  # кладём карту в колоду
+            self.pack.shuffle()  # перемешиваем колоду
             # добавляем 4 карты в руку игроку
-            if self.pack.lenght() >= 4: # если в колоде осталось больше 4 карт
+            if self.pack.lenght() >= 4:  # если в колоде осталось больше 4 карт
                 for i in range(4):
                     card = self.pack.deal_card() # забираем карту из колоды
                     player.hand.add_card(card) # добавляем карту в руку игроку
@@ -273,7 +272,7 @@ class GameSession:
         # игрок решил покинуть игру, при этом все его карты остаются на столе, карты с его руки добавляются в колоду, последняя перемешивается
         elif message['type'] == 'disconnection':
             player = self.get_player(client_id)
-            self.players.remove(player) # находим и удаляем данного игрока из очереди
+            self.players.remove(player)  # находим и удаляем данного игрока из очереди
 
             # Посылаем всем игрокам сообщение о том, какой игрок решил покинуть игру
             for player_ in self.players:
@@ -290,4 +289,4 @@ class GameSession:
                 card = player.hand.play_card(0)
                 self.pack.addCard(card)
 
-            self.pack.shuffle() # перемешиваем колоду
+            self.pack.shuffle()  # перемешиваем колоду
