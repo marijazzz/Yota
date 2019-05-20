@@ -3,6 +3,7 @@ import asyncio
 from Game_3 import GameServer
 import game_window
 
+
 class Client:
     """Описывает объекты типа Клиент.
     Создает объект типа клиент на сервере"""
@@ -49,7 +50,7 @@ class Client:
         data = self.sock.recv(1024, 'type')
         if data == b'error':
             reason = self.sock.recv(1024, 'reason')
-            return reason
+            return False
         self.cards.append((card, pos))
         return True
 
@@ -60,11 +61,14 @@ class Client:
             return True
         return False
 
-    def end_turn(self, flag):
+    def end_turn(self, flag, end=None):
         """Инициирует конец хода"""
+        deck = None
         if flag:
             self.sock.send(bytes(self.addr), 'id')
             if self.cards:
+                cards = []
+                name1 = self.name
                 self.sock.send(b'endTurn', 'type')
                 self.sock.send(bytes(self.cards), 'cards')
             else:
@@ -72,13 +76,19 @@ class Client:
                 deck = self.sock.recv(1024, 'cards')  # ВАЖНЫЙ КОММЕНТ: тут присылается новая колода
 
         else:
-            end = self.sock.recv(1024, 'type')
+            name1 = self.sock.recv(1024, 'name')
+
             if end == b'endTurn':
-                cards = self.sock.recv(1024, 'cards')  # ВАЖНЫЙ КОММЕНТ: тут присылаются положенные карты
+                cards = list(self.sock.recv(1024, 'cards'))  # ВАЖНЫЙ КОММЕНТ: тут присылаются положенные карты
+                cards = [list(x) for x in cards]
+                cards = [[str(x[0]), tuple(x[1])] for x in cards]
             elif end == b'endTurnAndRewindHand':
-                deck = self.sock.recv(1024, 'cards')  # ВАЖНЫЙ КОММЕНТ: тут присылается новая колода
-        name = self.sock.recv(1024, 'name')  # ВАЖНЫЙ КОММЕНТ: тут присылается имя нового текущего игрока
-        scores = list(self.sock.recv(1024, 'scores'))  # ВАЖНЫЙ КОММЕНТ: тут присылается текущий счет
+                deck = list(self.sock.recv(1024, 'cards'))  # ВАЖНЫЙ КОММЕНТ: тут присылается новая колода
+                deck = [str(x) for x in deck]
+        name = str(self.sock.recv(1024, 'name'))  # ВАЖНЫЙ КОММЕНТ: тут присылается имя нового текущего игрока
+        scores = dict(self.sock.recv(1024, 'scores'))  # ВАЖНЫЙ КОММЕНТ: тут присылается текущий счет
+        score = scores[bytes(name)]
+        self.window.player_turn(cards, name1, score, name, deck)
 
     def disconnection(self):
         """Посылает на сервер сообзение о желании выйти из игры"""
@@ -90,6 +100,8 @@ class Client:
         if message_type == b'YourTurn':
             self.start_turn()
         if message_type == b'endTurn':
-            self.end_turn(False)
+            self.end_turn(False, message_type)
+        if message_type == b'endTurnAndRewindHand':
+            self.end_turn(False, message_type)
         if message_type == b'error':
             reason = str(self.sock.recv(1024, 'reason'))  # ВАЖНЫЙ КОММЕНТ: тут присылается обоснование ошибки

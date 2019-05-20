@@ -43,13 +43,14 @@ class Server(GameServer):
     def send_error(self, id):
         """Отправляет ошибки"""
         self.room.sendto(b'error', 'type', (self._ip, id))
-        self.room.sendto(bytes(self.send_message[message]['reason']), 'reason', (self._ip, id))
+        self.room.sendto(bytes(self.send_message['message']['reason']), 'reason', (self._ip, id))
 
     def end_and_change_turn(self, new_player):
         """Передает ход следующему игроку"""
+        self.room.send(bytes(self.current_player.name), 'name')
         self.room.send(bytes(self.current_player.cards), 'cards')
         self.room.send(bytes(new_player.name), 'name')
-        self.room.send(bytes(self.send_message[message]['desk']), 'score')
+        self.room.send(bytes(self.send_message['message']['desk']), 'score')
         self.current_player = new_player
         self.room.sendto(b'YourTurn', 'type', (self._ip, new_player.addr))
 
@@ -107,8 +108,6 @@ def create_mother(port):
     return server
 
 
-
-
 def open_game(mother, window):  # срабатывает при открытии окна
     """Создает клиента компьютера, с которого был подан запрос на поиск игры"""
     connection = False  # проверяем установку соединения
@@ -120,7 +119,7 @@ def open_game(mother, window):  # срабатывает при открытии
             connection = True  # подтверждаем подключение
 
     if not connection:  # если соединение не установлено
-        sock, addr = mother.accept()  # создаем сокет и адресс новой комнаты
+        sock, addr = mother.room.accept()  # создаем сокет и адресс новой комнаты
         server = Server(addr, sock)  # создаем клиент на данных сокете и порте
         mother.rooms.add(server)  # добавляем комнату в список комнат
         client = Client(server.room.accept(), window)  # создаем клиента на новообретенном клиенте
