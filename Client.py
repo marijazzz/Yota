@@ -19,8 +19,8 @@ class Client:
         return self.addr
 
     def get_name(self, name):
-        """Присваивает имя клиенту"""
-        self.name = name
+        """Передает имя клиента"""
+        return self.name
 
     def give_name(self, name):
         """Присваивает имя клиенту"""
