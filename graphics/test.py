@@ -1,5 +1,5 @@
 import sys
-import client
+import random
 from PyQt5 import QtCore
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
@@ -15,19 +15,46 @@ class Player:
 
 
 class PlayersWidget(QWidget):
+
     def __init__(self, parent):
         super(PlayersWidget, self).__init__()
-        self.players = []
         self.parent = parent
+        self.players = []
+        self.rectangles = []
+        self.setGeometry(0, 0, self.parent.width(), 50)
+        x = self.width() / 4
+        y = self.height() / 4
+        for i in range(4):
+            self.rectangles.append(QtCore.QRect(x * i, 0, x, y))
+            self.players.append(Player('0', 0))
 
     def set_players(self, name):
         for i in range(4):
-            self.players.append(Player(name, 0))
+            self.players.append(Player(name[i], 0))
+        print(self.players[3].player_name)
 
     def get_players(self):
         return self.players
 
-    def update(self):
+    def update_players(self, name1, score, name2):
+        for i in range(4):
+            if self.players[i].player_name == name1:
+                self.players[i].player_score = score
+            if self.players[i].player_name == name2:
+                self.players[i].set_current()
+        self.update()
+
+    def paintEvent(self, QPaintEvent):
+        painter = QPainter()
+        painter.begin(self)
+        for i in range(4):
+            text = self.players[i].player_name + ': '+ str(self.players[i].player_score)
+            if self.players[i].current == 1:
+                painter.setPen(QtCore.Qt.red)
+            else:
+                painter.setPen(QtCore.Qt.black)
+            painter.drawText(self.rectangles[i], QtCore.Qt.AlignTop, text)
+        painter.end()
 
 
 class ImageWidget(QWidget):
@@ -150,7 +177,7 @@ class CardWidget(QWidget):
             self.update(square)
             event.setDropAction(QtCore.Qt.MoveAction)
             if (self.play_field[square.x() // self.tile_size][square.y() // self.tile_size].get_image()) is None:
-                if self.parent.client.check_card(image) == 1:
+                if random.randint(0, 1) == 1:
                     self.play_field[square.x() // self.tile_size][square.y() // self.tile_size].set_image(image)
                     event.accept()
                 else:
@@ -286,7 +313,6 @@ class MainWindow(QMainWindow):
         self.set_up_widgets()
         self.player = 'Player'
         self.setWindowTitle("Ёпта")
-        self.client = client.Client()
 
     def open_image(self):
         new_image = []
