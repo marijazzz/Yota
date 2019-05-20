@@ -1,8 +1,33 @@
-import random
+import sys
 import client
 from PyQt5 import QtCore
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
+
+
+class Player:
+    def __init__(self, name, score):
+        self.player_name = name
+        self.player_score = score
+
+    def update(self, score):
+        self.player_score = score
+
+
+class PlayersWidget(QWidget):
+    def __init__(self, parent):
+        super(PlayersWidget, self).__init__()
+        self.players = []
+        self.parent = parent
+
+    def set_players(self, name):
+        for i in range(4):
+            self.players.append(Player(name, 0))
+
+    def get_players(self):
+        return self.players
+
+    def update(self):
 
 
 class ImageWidget(QWidget):
@@ -42,11 +67,10 @@ class Tile:
 
     def get_image(self):
         return self.piece_image
-    
-    
+
+
 class CardWidget(QWidget):
     def __init__(self, parent=None):
-
         super(CardWidget, self).__init__()
         self.parent = parent
         self.field_size = 103
@@ -55,8 +79,6 @@ class CardWidget(QWidget):
         for i in range(self.field_size):
             for j in range(self.field_size):
                 self.play_field[i][j] = Tile()
-        self.card_images = []
-        self.card_rectangles = []
         self.setAcceptDrops(True)
         self.setMinimumSize(self.tile_size * self.field_size, self.tile_size * self.field_size)
         self.setMaximumSize(self.tile_size * self.field_size, self.tile_size * self.field_size)
@@ -69,6 +91,10 @@ class CardWidget(QWidget):
             self.setMinimumSize(self.tile_size * self.field_size, self.tile_size * self.field_size)
             self.setMaximumSize(self.tile_size * self.field_size, self.tile_size * self.field_size)
             self.update()
+            self.parent.scroll_area.horizontalScrollBar().setSliderPosition(
+                self.parent.CardWidget.tile_size * self.parent.CardWidget.field_size // 2)
+            self.parent.scroll_area.verticalScrollBar().setSliderPosition(
+                self.parent.CardWidget.tile_size * self.parent.CardWidget.field_size // 2)
 
     def zoom_out(self):
         if self.tile_size > 30:
@@ -76,10 +102,15 @@ class CardWidget(QWidget):
             self.setMinimumSize(self.tile_size * self.field_size, self.tile_size * self.field_size)
             self.setMaximumSize(self.tile_size * self.field_size, self.tile_size * self.field_size)
             self.update()
+            self.parent.scroll_area.horizontalScrollBar().setSliderPosition(
+                self.parent.CardWidget.tile_size * (self.parent.CardWidget.field_size - 3) / 2)
+            self.parent.scroll_area.verticalScrollBar().setSliderPosition(
+                self.parent.CardWidget.tile_size * (self.parent.CardWidget.field_size - 1) / 2)
 
     def clear(self):
-        self.card_images = []
-        self.card_rectangles = []
+        for i in range(self.field_size):
+            for j in range(self.field_size):
+                self.play_field[i][j] = Tile()
         self.update()
 
     def load_tile_image(self, path=None):
@@ -90,7 +121,7 @@ class CardWidget(QWidget):
         return new_image
 
     def dragEnterEvent(self, event):
-        if event.mime_data().hasFormat('card'):
+        if event.mimeData().hasFormat('card'):
             event.accept()
         else:
             event.ignore()
@@ -100,7 +131,9 @@ class CardWidget(QWidget):
         event.accept()
 
     def dragMoveEvent(self, event):
-        if event.mime_data().hasFormat('card') and self.find_card(self.target_square(event.pos())) == -1:
+        square = self.target_square(event.pos())
+        if event.mimeData().hasFormat('card') and (self.play_field[square.x() // self.tile_size]
+        [square.y() // self.tile_size].get_image()) is None:
             event.setDropAction(QtCore.Qt.MoveAction)
             event.accept()
         else:
@@ -108,11 +141,10 @@ class CardWidget(QWidget):
         self.update()
 
     def dropEvent(self, event):
-        if event.mime_data().hasFormat('card') and self.find_card(self.target_square(event.pos())) == -1:
-            card_data = event.mime_data().data('card')
+        if event.mimeData().hasFormat('card'):
+            card_data = event.mimeData().data('card')
             stream = QtCore.QDataStream(card_data, QtCore.QIODevice.ReadOnly)
             square = self.target_square(event.pos())
-            print(square)
             image = QPixmap()
             stream >> image
             self.update(square)
@@ -127,12 +159,6 @@ class CardWidget(QWidget):
                 event.ignore()
         else:
             event.ignore()
-
-    def find_card(self, card_rectangle):
-        try:
-            return self.card_rectangles.index(card_rectangle)
-        except ValueError:
-            return -1
 
     def paintEvent(self, event):
         painter = QPainter()
@@ -159,9 +185,9 @@ class CardWidget(QWidget):
                             position.y() // self.tile_size * self.tile_size, self.tile_size, self.tile_size)
 
 
-class PiecesModel(QtCore.QAbstractListModel):
+class CardModel(QtCore.QAbstractListModel):
     def __init__(self, parent=None):
-        super(PiecesModel, self).__init__(parent)
+        super(CardModel, self).__init__(parent)
         self.image_stack = []
         self.images = []
 
@@ -169,18 +195,14 @@ class PiecesModel(QtCore.QAbstractListModel):
         if not index.isValid():
             return None
         if role == QtCore.Qt.DecorationRole:
-            return QIcon(self.images[index.row()].scaled(
-                60, 60, QtCore.Qt.KeepAspectRatio,
-                QtCore.Qt.SmoothTransformation))
+            return QIcon(self.images[index.row()].scaled(60, 60,
+                                                         QtCore.Qt.KeepAspectRatio, QtCore.Qt.SmoothTransformation))
         if role == QtCore.Qt.UserRole:
             return self.images[index.row()]
         return None
 
     def add_card(self, image):
-        if random.random() < 0.5:
-            row = 0
-        else:
-            row = len(self.images)
+        row = len(self.images)
         self.beginInsertRows(QtCore.QModelIndex(), row, row)
         self.images.insert(row, image)
         self.endInsertRows()
@@ -203,11 +225,8 @@ class PiecesModel(QtCore.QAbstractListModel):
         self.endRemoveRows()
         return True
 
-    def mimeTypes(self):
-        return ['card']
-
     def mimeData(self, indexes):
-        mime_data = QtCore.QmimeData()
+        mime_data = QtCore.QMimeData()
         encoded_data = QtCore.QByteArray()
         stream = QtCore.QDataStream(encoded_data, QtCore.QIODevice.WriteOnly)
         for index in indexes:
@@ -216,31 +235,6 @@ class PiecesModel(QtCore.QAbstractListModel):
                 stream << image
         mime_data.setData('card', encoded_data)
         return mime_data
-
-    def dropMimeData(self, data, action, row, column, parent):
-        if not data.hasFormat('card'):
-            return False
-        if action == QtCore.Qt.IgnoreAction:
-            return True
-        if column > 0:
-            return False
-        if not parent.isValid():
-            if row < 0:
-                end_row = len(self.images)
-            else:
-                end_row = min(row, len(self.images))
-        else:
-            end_row = parent.row()
-        encoded_data = data.data('card')
-        stream = QtCore.QDataStream(encoded_data, QtCore.QIODevice.ReadOnly)
-        while not stream.atEnd():
-            image = QPixmap()
-            stream >> image
-            self.beginInsertRows(QtCore.QModelIndex(), end_row, end_row)
-            self.images.insert(end_row, image)
-            self.endInsertRows()
-            end_row += 1
-        return True
 
     def rowCount(self, parent):
         if parent.isValid():
@@ -251,8 +245,9 @@ class PiecesModel(QtCore.QAbstractListModel):
     def supportedDropActions(self):
         return QtCore.Qt.CopyAction | QtCore.Qt.MoveAction
 
-    def set_stack(self, image):
-        self.image_stack = image
+    def set_stack(self, images):
+        self.image_stack = images
+        print(images)
 
     def add_cards(self):
         for y in range(len(self.images), 4):
@@ -267,8 +262,8 @@ class MainWindow(QMainWindow):
         super(MainWindow, self).__init__(parent)
         self.frame = QFrame()
         self.frameLayout = QGridLayout(self.frame)
-        self.piecesList = QListView()
-        self.model = PiecesModel(self)
+        self.cardList = QListView()
+        self.model = CardModel(self)
         self.CardWidget = CardWidget(parent=self)
         self.scroll_area = QScrollArea()
         self.scroll_widget = self.CardWidget
@@ -285,14 +280,13 @@ class MainWindow(QMainWindow):
         self.player_name = QLineEdit()
         self.set_nameButton = QPushButton('Ввести имя')
         self.tmp_widget = ImageWidget(self)
-        self.cardImage = QPixmap()
+        self.cardImage = None
         self.setGeometry(200, 200, 400, 400)
         self.set_up_menus()
         self.set_up_widgets()
         self.player = 'Player'
         self.setWindowTitle("Ёпта")
         self.client = client.Client()
-        self.showFullScreen()
 
     def open_image(self):
         new_image = []
@@ -310,32 +304,31 @@ class MainWindow(QMainWindow):
         self.CardWidget.clear()
 
     def set_up_menus(self):
-        file_menu = self.menuBar().addMenu("&File")
-        exit_action = file_menu.addAction("E&xit")
+        game_menu = self.menuBar().addMenu("&Game")
+        exit_action = game_menu.addAction("E&xit")
         exit_action.setShortcut("Ctrl+Q")
         exit_action.triggered.connect(qApp.quit)
-        game_menu = self.menuBar().addMenu("&Game")
         rules_action = game_menu.addAction('Rules')
         rules_action.triggered.connect(self.show_message)
         rules_action.setShortcut("Ctrl+R")
 
     def set_up_widgets(self):
-        self.piecesList.setDragEnabled(True)
-        self.piecesList.setViewMode(QListView.IconMode)
-        self.piecesList.setIconSize(QtCore.QSize(80, 80))
-        self.piecesList.setGridSize(QtCore.QSize(90, 90))
-        self.piecesList.setSpacing(10)
-        self.piecesList.setMovement(QListView.Snap)
-        self.piecesList.setAcceptDrops(True)
-        self.piecesList.setDropIndicatorShown(True)
-        self.piecesList.setModel(self.model)
-        self.piecesList.setMaximumWidth(100)
+        self.cardList.setDragEnabled(True)
+        self.cardList.setViewMode(QListView.IconMode)
+        self.cardList.setIconSize(QtCore.QSize(80, 80))
+        self.cardList.setGridSize(QtCore.QSize(90, 90))
+        self.cardList.setSpacing(10)
+        self.cardList.setMovement(QListView.Snap)
+        self.cardList.setAcceptDrops(True)
+        self.cardList.setDropIndicatorShown(True)
+        self.cardList.setModel(self.model)
+        self.cardList.setMaximumWidth(100)
         self.scroll_area.setWidget(self.scroll_widget)
         self.scroll_area.horizontalScrollBar().setSliderPosition(
             self.CardWidget.tile_size * (self.CardWidget.field_size - 10) / 2)
         self.scroll_area.verticalScrollBar().setSliderPosition(
             self.CardWidget.tile_size * (self.CardWidget.field_size - 5) / 2)
-        self.splitter.addWidget(self.piecesList)
+        self.splitter.addWidget(self.cardList)
         self.splitter.addWidget(self.scroll_area)
         self.buttonLayout.addWidget(self.rulesButton)
         self.buttonLayout.addWidget(self.playButton)
@@ -371,7 +364,6 @@ class MainWindow(QMainWindow):
     def set_name(self):
         text_box_value = self.player_name.text()
         self.player = text_box_value
-        print(self.player)
 
     def logo(self):
         self.tmp_widget.hide()
@@ -385,17 +377,15 @@ class MainWindow(QMainWindow):
         self.zoom_outButton.show()
         self.end_turnButton.show()
         self.splitter.show()
+        self.player_name.hide()
+        self.set_nameButton.hide()
 
     def end_turn(self):
         self.model.add_cards()
 
     def zoom_in(self):
         self.CardWidget.zoom_in()
-        self.scroll_area.horizontalScrollBar().setSliderPosition(
-            self.CardWidget.tile_size * self.CardWidget.field_size // 2)
-        self.scroll_area.verticalScrollBar().setSliderPosition(
-            self.CardWidget.tile_size * self.CardWidget.field_size // 2)
-        
+
     def show_message(self):
         try:
             text = open(r"rules.txt", "r", encoding="utf8").read()
@@ -410,14 +400,9 @@ class MainWindow(QMainWindow):
 
     def zoom_out(self):
         self.CardWidget.zoom_out()
-        self.scroll_area.horizontalScrollBar().setSliderPosition(
-            self.CardWidget.tile_size * (self.CardWidget.field_size - 3) / 2)
-        self.scroll_area.verticalScrollBar().setSliderPosition(
-            self.CardWidget.tile_size * (self.CardWidget.field_size - 1) / 2 )
 
 
 if __name__ == '__main__':
-    import sys
     app = QApplication(sys.argv)
     window = MainWindow()
     window.open_image()
