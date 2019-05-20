@@ -86,6 +86,8 @@ class Client:
     async def receive_message(self):
         """Обрабатывает сигналы от сервера"""
         message_type = self.sock.recv(1024, 'type')
+        if message_type == b'StartGame':
+            pass
         if message_type == b'YourTurn':
             self.start_turn()
         if message_type == b'endTurn':
