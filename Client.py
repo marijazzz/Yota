@@ -15,15 +15,25 @@ class Client:
         self.server = server
         self.cards = []
 
-    def send_id(self):
-        self.sock.send(b'id', 'type')
-        self.sock.send(bytes(self.addr), 'id')
+    def get_id(self):
+        return self.addr
 
-    def send_name(self):
-        self.sock.send(b'name', 'type')
-        self.sock.send(bytes(self.name), 'name')
+    def give_name(self, name):
+        self.name = name
+
+    def det_names(self):
+        self.sock.send(bytes(self.addr), 'id')
+        self.sock.send(b'names', 'type')
+        names = []
+        for i in range(4):
+            names.append(str(self.sock.recv(1024, 'name')))
+        return names
+
+    def get_name(self):
+        return self.name
 
     def send_card(self, card, pos):
+        self.sock.send(bytes(self.addr), 'id')
         self.sock.send(b'IPutCard', 'type')
         self.sock.send(bytes(card), 'card')
         self.sock.send(bytes(pos), 'pos')
@@ -42,6 +52,7 @@ class Client:
 
     def end_turn(self, flag):
         if flag:
+            self.sock.send(bytes(self.addr), 'id')
             if self.cards:
                 self.sock.send(b'endTurn', 'type')
                 self.sock.send(bytes(self.cards), 'cards')
@@ -55,11 +66,15 @@ class Client:
                 cards = self.sock.recv(1024, 'cards')  # ВАЖНЫЙ КОММЕНТ: тут присылаются положенные карты
             elif end == b'endTurnAndRewindHand':
                 deck = self.sock.recv(1024, 'cards')  # ВАЖНЫЙ КОММЕНТ: тут присылается новая колода
-            name = self.sock.recv(1024, 'name')  # ВЫЖНЫЙ КОММЕНТ: тут присылается имя нового текущего игрока
+            name = self.sock.recv(1024, 'name')  # ВАЖНЫЙ КОММЕНТ: тут присылается имя нового текущего игрока
 
     async def receive_message(self):
-        message_type = self.sock.recv(1024, type)
-        if message_type == b'StartTurn':
+        message_type = self.sock.recv(1024, 'type')
+        if message_type == b'YourTurn':
             self.start_turn()
         if message_type == b'endTurn':
             self.end_turn(False)
+        if message_type == b'error':
+            reason = str(self.sock.recv(1024, 'reason'))  # ВАЖНЫЙ КОММЕНТ: тут присылается обоснование ошибки
+        if message_type == b'current_score':
+            score = list(self.sock.recv(1024, 'score'))

@@ -1,12 +1,13 @@
 import socket
-import 
+from Game_3 import GameServer
 
 
-class Server:
+class Server(GameServer):
     """Описывает объекты типа сервер.
     Создет комнату."""
 
     _ip = '127.0.0.1'
+    _flags = ['type', 'id', 'name', 'card', 'cards', 'pos', 'reason']
 
     def __init__(self, port, sock, mother=False):
         self.port = port  # определяем порт, на котором будет находиться данна комната
@@ -35,11 +36,64 @@ class Server:
         pos = self.room.recv(1024, 'pos')
         return card, pos
 
-    def change_turn(self, new_player):
+    def send_error(self, id):
+        self.room.sendto(b'error', 'type', (self._ip, id))
+        self.room.sendto(bytes(self.send_message[message]['reason']), 'reason', (self._ip, id))
+
+    def end_and_change_turn(self, new_player):
         """Передает ход следующему игроку"""
         self.room.send(bytes(self.current_player.cards), 'cards')
         self.room.send(bytes(new_player.name), 'name')
+        self.room.send(b'current_score', 'type')
+        self.room.send(bytes(self.send_message[message]['desk']), 'score')
         self.current_player = new_player
+        self.room.sendto(b'YourTurn', 'type', (self._ip, new_player.addr))
+
+    async def receive_message(self):
+        id = self.room.recv(1024, 'id')
+        message_type = self.room.recv(1024, 'type')
+
+        if message_type == b'names':
+            for client in self.slients:
+                self.room.sendto(bytes(client.name), 'name', (self._ip, id))
+
+        if message_type == b'IPutCard':
+            card = self.room.recv(1024, 'card')
+            pos = self.room.recv(1024, 'pos')
+            message = {'type': str(message_type), 'card': str(card), 'desk_position': tuple(pos)}
+            self.on_message(str(id), message)
+
+        if message_type == b'endTurn':
+            message = {'type': message_type}
+            b = self.on_message(str(id), message)
+            if b is None:
+                new_player_id = int(self.players[self.current_turn_player_index].client_id)
+                new_player = None
+                for client in self.clients:
+                    if client.addr == new_player_id:
+                        new_player = client
+                        break
+                self.end_and_change_turn(new_player)
+            else:
+                self.room.sendto(b'error', 'type', (self._ip, id))
+                self.room.sendto(self.send_message[message]['reason'], 'reason', (self._ip, id))
+
+        if message_type == b'endTurnAndRewindHand':
+            message = {'type': message_type}
+            b = self.on_message(str(id), message)
+            if b is None:
+                new_player_id = int(self.players[self.current_turn_player_index].client_id)
+                new_player = None
+                for client in self.clients:
+                    if client.addr == new_player_id:
+                        new_player = client
+                        break
+                self.end_and_change_turn(new_player)
+
+        if message_type == b'disconnection':
+            message = {'type': message_type}
+            self.on_message(id, message)
+            self.disconnection()
 
 
 class Client:
@@ -89,7 +143,6 @@ class Client:
 
     def work(self):
         """Определяет работу клиента"""
-
 
 
 def create_mother(port):
