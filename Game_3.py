@@ -3,7 +3,6 @@ import socket
 
 from Player import Player
 from Session import GameSession
-from Bot import Bot
 
 REMOTE_SERVER = "www.google.com"
 

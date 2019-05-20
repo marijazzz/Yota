@@ -23,7 +23,11 @@ class Bot:
         return current_state
 
     def score_best(self, this_card):
-        card = self.hand[this_card]
+        try:
+            card = self.hand[this_card]
+        except IndexError:
+            message = {'type': 'disconnection'}
+            return message
         for x in range(1, len(self.current_state)-1):
             for y in range(1, len(self.current_state)-1):
                 flag = False
@@ -62,5 +66,6 @@ class Bot:
 
         # если приходит сообщение о том, что очередь бота
         elif message['type'] == 'YourTurn':
+            self.hand = message['hand']
             self.this_card = 0
             return self.score_best(self.this_card)

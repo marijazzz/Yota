@@ -65,28 +65,45 @@ class GameSession:
         :return:
         """
         # выбор следующего игрока (по индексу заполнения очереди)
-        self.current_turn_player_index = (self.current_turn_player_index + 1) % 4
+        try:
+            self.current_turn_player_index = (self.current_turn_player_index + 1) % 4
 
-        current_player = self.players[self.current_turn_player_index]
-        current_player.label = 'turn'
-        self.send_message(
-            client_id=current_player.client_id,
-            message={
-                'type': 'YourTurn',
-                'hand': [str(card) for card in current_player.hand.cards]
-            }
-        )
+            current_player = self.players[self.current_turn_player_index]
+            current_player.label = 'turn'
+            self.send_message(
+                client_id=current_player.client_id,
+                message={
+                    'type': 'YourTurn',
+                    'hand': [str(card) for card in current_player.hand.cards]
+                }
+            )
 
-        for elem in self.bots:
-            if current_player.client_id == elem.bot_id:
-                bots_message = elem.on_message(message={'type': 'YourTurn',
-                                                        'hand': [str(card) for card in current_player.hand.cards]})
+            for elem in self.bots:
+                if current_player.client_id == elem.bot_id:
+                    bots_message = elem.on_message(message={'type': 'YourTurn',
+                                                            'hand': [str(card) for card in current_player.hand.cards]})
+                    self.send_message(
+                        client_id=current_player.client_id,
+                        message={'type': 'endTurn'})
+                    await self.on_message(current_player.client_id, bots_message)
+
+                    while current_player.hand.get_amount() < 4:
+                        if self.pack.length() != 0:
+                            card = self.pack.deal_card()
+                            current_player.hand.add_card(card)
+                        else:  # конец колоды
+                            break
+
+                    await self.change_turn()
+        except IndexError:
+            for player in self.players:
                 self.send_message(
-                    client_id=current_player.client_id,
-                    message='endTurn')
-                await self.on_message(current_player.client_id, bots_message)
-
-                await self.change_turn()
+                    client_id=player.client_id,
+                    message={
+                        'type': 'endGame',
+                        'matter': f'Игра окончена'
+                    }
+                )
 
     def desk_state_message(self, player):
         """
@@ -215,7 +232,7 @@ class GameSession:
 
             player = self.get_player(client_id)
 
-            while player.hand.get_amount() != 4:
+            while player.hand.get_amount() < 4:
                 if self.pack.length() != 0:
                     card = self.pack.deal_card()
                     player.hand.add_card(card)
